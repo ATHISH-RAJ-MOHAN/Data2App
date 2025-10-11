@@ -1,10 +1,98 @@
 from datetime import datetime
 
+class Column:
+    def __init__(self, values):
+        self.values = values
+
+    # Comparison operators return Column of booleans
+    def __gt__(self, other):
+        return Column([v > other if v is not None else False for v in self.values])
+
+    def __lt__(self, other):
+        return Column([v < other if v is not None else False for v in self.values])
+
+    def __eq__(self, other):
+        return Column([v == other if v is not None else False for v in self.values])
+
+    def __ge__(self, other):
+        return Column([v >= other if v is not None else False for v in self.values])
+
+    def __le__(self, other):
+        return Column([v <= other if v is not None else False for v in self.values])
+
+    def __ne__(self, other):
+        return Column([v != other if v is not None else False for v in self.values])
+
+    # Logical operators return Column of booleans
+    def __and__(self, other):
+        return Column([a and b for a, b in zip(self.values, other.values)])
+
+    def __or__(self, other):
+        return Column([a or b for a, b in zip(self.values, other.values)])
+
+    def __invert__(self):
+        return Column([not a for a in self.values])
+
+    # Membership check
+    def isin(self, values):
+        return Column([v in values if v is not None else False for v in self.values])
+
+    # Indexing and length
+    def __getitem__(self, index):
+        return self.values[index]
+
+    def __len__(self):
+        return len(self.values)
+
+    def __repr__(self):
+        return repr(self.values)
+    
+
+class LocAccessor:
+    def __init__(self, grid):
+        self.grid = grid
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple) and len(key) == 2:
+            row_key, col_key = key
+            if isinstance(row_key, int) and isinstance(col_key, str):
+                if col_key not in self.grid.columns:
+                    raise KeyError(f"Column '{col_key}' not found")
+                if not (0 <= row_key < self.grid.numberOfRows):
+                    raise IndexError("Row index out of range")
+                return self.grid.data[col_key][row_key]
+
+            if isinstance(row_key, list) and isinstance(col_key, list):
+                for i in row_key:
+                    if not (0 <= i < self.grid.numberOfRows):
+                        raise IndexError(f"Row index {i} out of range")
+                for col in col_key:
+                    if col not in self.grid.columns:
+                        raise KeyError(f"Column '{col}' not found")
+                filtered_data = {
+                    col: [self.grid.data[col][i] for i in row_key]
+                    for col in col_key
+                }
+                return DataGrid(filtered_data)
+
+        elif isinstance(key, list) and all(isinstance(i, int) for i in key):
+            for i in key:
+                if not (0 <= i < self.grid.numberOfRows):
+                    raise IndexError(f"Row index {i} out of range")
+            filtered_data = {
+                col: [self.grid.data[col][i] for i in key]
+                for col in self.grid.columns
+            }
+            return DataGrid(filtered_data)
+
+        raise TypeError("Use .loc[row_index, column_name] or .loc[[...]]")
+
 class DataGrid:
     def __init__(self, dataDict):
         
         self.columns = list(dataDict.keys())
         self.numberOfRows = max((len(rows) for rows in dataDict.values()), default=0)
+        self.loc = LocAccessor(self) # For loc method
         
         for col in self.columns:
             col_data = dataDict[col]
@@ -14,10 +102,34 @@ class DataGrid:
         self.data = dataDict
 
     def __getitem__(self, key):
-        if isinstance(key, list):
-            return DataGrid({col: self.data[col] for col in key})
+      if isinstance(key, str):
+          # Access a single column
+          return Column(self.data.get(key, []))
+
+      elif isinstance(key, list):
+          # Case: Boolean mask
+          if all(isinstance(k, bool) for k in key):
+              return self.filter_by_mask(key)
+
+          # Case: Column projection
+          elif all(isinstance(k, str) for k in key):
+              return DataGrid({col: self.data[col] for col in key})
+
+          else:
+              raise TypeError("Unsupported list type for __getitem__")
+
+      elif isinstance(key, Column):
+        # If values are booleans, use as mask
+        if all(isinstance(k, bool) for k in key.values):
+            return self.filter_by_mask(key.values)
+
+        # If values are non-booleans, treat truthy values as True
         else:
-            return self.data.get(key, [])
+            mask = [bool(v) for v in key.values]
+            return self.filter_by_mask(mask)
+
+      else:
+          raise TypeError("Unsupported key type")
 
     def head(self, n=5):
         return {col: vals[:n] for col, vals in self.data.items()}
@@ -81,6 +193,43 @@ class DataGrid:
                 mergedData[col].append(row[col])
 
         return DataGrid(mergedData)
+    
+    def filter(self, predicate):
+      filtered_data = {col: [] for col in self.columns}
+      for i in range(self.numberOfRows):
+          row = {col: self.data[col][i] for col in self.columns}
+          if predicate(row):
+              for col in self.columns:
+                  filtered_data[col].append(self.data[col][i])
+      return DataGrid(filtered_data)
+
+    def filter_by_mask(self, mask):
+      if len(mask) != self.numberOfRows:
+          raise ValueError("Mask length must match number of rows")
+      filtered_data = {col: [] for col in self.columns}
+      for i, keep in enumerate(mask):
+          if keep:
+              for col in self.columns:
+                  filtered_data[col].append(self.data[col][i])
+      return DataGrid(filtered_data)
+    
+    
+    '''def loc(self, predicate, columns=None):
+        selected_columns = columns if columns else self.columns
+        filtered_data = {col: [] for col in selected_columns}
+        for i in range(self.numberOfRows):
+            row = {col: self.data[col][i] for col in self.columns}
+            if predicate(row):
+                for col in selected_columns:
+                    filtered_data[col].append(self.data[col][i])
+        return DataGrid(filtered_data)'''
+    
+    def isin(self, column, values):
+        return self.filter(lambda row: row[column] in values)
+    
+    def query(self, expression):
+        return self.filter(lambda row: eval(expression, {}, row))
+
         
 
 # def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
