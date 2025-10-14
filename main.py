@@ -115,6 +115,46 @@ class LocAccessor:
 
         raise TypeError("Use .loc[row_index, column_name] or .loc[[...]]")
 
+class GroupBy:
+    def __init__(self, dataGridObject, groupByColumns):
+        self.dataGridObject = dataGridObject
+        self.groupByColumns = groupByColumns
+
+    def agg(self, aggregateDict):
+        groups = {}
+        nonGroupByColumns = [c for c in self.dataGridObject.columns if c not in self.groupByColumns]
+
+        # Build groups
+        for i in range(self.dataGridObject.numberOfRows):
+            key = tuple(self.dataGridObject.data[c][i] for c in self.groupByColumns)
+            groups.setdefault(key, {col: [] for col in nonGroupByColumns})
+            for col in nonGroupByColumns:
+                groups[key][col].append(self.dataGridObject.data[col][i])
+
+        # Aggregate
+        result = {col: [] for col in self.groupByColumns + list(aggregateDict.keys())}
+        for key, valuesDict in groups.items():
+            for i, col in enumerate(self.groupByColumns):
+                result[col].append(key[i])
+            for col, func in aggregateDict.items():
+                vals = [v for v in valuesDict[col] if v is not None]
+                if not vals:
+                    result[col].append(None)
+                elif func == 'sum':
+                    result[col].append(sum(vals))
+                elif func == 'avg':
+                    result[col].append(sum(vals)/len(vals))
+                elif func == 'min':
+                    result[col].append(min(vals))
+                elif func == 'max':
+                    result[col].append(max(vals))
+                elif func == 'count':
+                    result[col].append(len(vals))
+                else:
+                    raise ValueError(f"Unsupported aggregation: {func}")
+
+        return DataGrid(result)
+
 class DataGrid:
     def __init__(self, dataDict):
         
@@ -257,6 +297,14 @@ class DataGrid:
     
     def query(self, expression):
         return self.filter(lambda row: eval(expression, {}, row))
+    
+    def groupby(self, columns):
+        if isinstance(columns, str):
+            columns = [columns]
+        for c in columns:
+            if c not in self.columns:
+                raise KeyError(f"Column '{c}' not found")
+        return GroupBy(self, columns)
 
 # def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
 def parseCSV(filePath):

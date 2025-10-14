@@ -101,6 +101,17 @@ print(dg1['GNP'].max())
 print(dg1['GNP'].sum())
 print(dg1['GNP'].avg())
 
+print("TESTING GROUP BY")
+dg1.groupby('Name').agg({'Population' : 'sum'}).print()
+print()
+dg1.groupby('Name').agg({'Population' : 'max'}).print()
+print()
+dg1.groupby('Name').agg({'Population' : 'min'}).print()
+print()
+dg1.groupby('Name').agg({'Population' : 'avg'}).print()
+print()
+dg1.groupby('Name').agg({'Population' : 'count'}).print()
+
 def run_filter_tests(file_name):
     print(f"\nRunning FILTER tests on: {file_name}")
     try:
