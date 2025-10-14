@@ -93,6 +93,14 @@ dg2 = parseCSV("Testing_Datasets/Countries2.csv")
 dg3 = dg1.merge(dg2,on="Name",how="outer")
 dg3.print()
 
+print("TESTING COUNT")
+print(type(dg1['GNP']))
+print(dg1['GNP'].count())
+print(dg1['GNP'].min())
+print(dg1['GNP'].max())
+print(dg1['GNP'].sum())
+print(dg1['GNP'].avg())
+
 def run_filter_tests(file_name):
     print(f"\nRunning FILTER tests on: {file_name}")
     try:

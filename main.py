@@ -47,6 +47,34 @@ class Column:
     def __repr__(self):
         return repr(self.values)
     
+    def count(self):
+        return sum(1 for v in self.values if v is not None)
+
+    def min(self):
+        validValues = [v for v in self.values if v is not None]
+        if(validValues):
+            return min(validValues)
+        return None
+
+    def max(self):
+        validValues = [v for v in self.values if v is not None]
+        if(validValues):
+            return max(validValues)
+        return None
+
+    def sum(self):
+        validValues = [v for v in self.values if isinstance(v, (int, float, bool))]
+        if(validValues):
+            return sum(validValues)
+        return 0
+
+    def avg(self):
+        validValues = [v for v in self.values if isinstance(v, (int, float, bool))]
+        if(validValues):
+            return sum(validValues)/len(validValues)
+        return None
+
+    
 
 class LocAccessor:
     def __init__(self, grid):
@@ -229,8 +257,6 @@ class DataGrid:
     
     def query(self, expression):
         return self.filter(lambda row: eval(expression, {}, row))
-
-        
 
 # def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
 def parseCSV(filePath):
