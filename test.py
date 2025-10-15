@@ -1,4 +1,4 @@
-from main import parseCSV
+from main import parseCSV, DataGrid
 import pandas as pd
 
 """#### Custom testing without comparision with Pandas"""
@@ -179,3 +179,130 @@ def run_filter_tests(file_name):
     
 
 run_filter_tests('Testing_Datasets/Countries.csv')
+
+
+print("\nGROUPBY Edge Cases")
+dg1 = parseCSV("Testing_Datasets/Countries_BadRows.csv")
+# 1. Group by column with all unique values
+print("Group by 'Name' (unique keys):")
+dg1.groupby('Name').agg({'GNP': 'sum'}).print()
+
+# 2. Group by column with missing values
+print("\nGroup by 'GNP' (includes None):")
+if 'Population' in dg1.columns:
+    dg1.groupby('GNP').agg({'Population': 'sum'}).print()
+else:
+    print("Column 'Population' not found — skipping aggregation.")
+
+# 3. Group by float column
+print("\nGroup by float GNP values:")
+dg1.groupby('GNP').agg({'Name': 'count'}).print()
+
+# 4. Group by derived column
+# Create derived column
+'''
+dg1.data['Size'] = ['Large' if p > 1e9 else 'Small' for p in dg1['Population']]
+# Register the column in the schema
+if 'Size' not in dg1.columns:
+    dg1.columns.append('Size')
+# Now group by it
+print("Group by derived 'Size' column:")
+dg1.groupby('Size').agg({'Name': 'count'}).print()
+'''
+'''
+# Simulate parsed CSV data
+dg1 = DataGrid({
+    'Name': ['USA', 'India', 'Germany'],
+    'Code': ['US', 'IN', 'DE'],
+    'GNP': [200000, None, 120000],
+    'Population': [None, None, 83000000]  # intentionally messy
+})'''
+
+# Derived column: classify countries as 'Large' or 'Small' population
+dg1.data['Size'] = [None] * dg1.numberOfRows
+for i in range(dg1.numberOfRows):
+    pop = dg1.data.get('Population', [None]*dg1.numberOfRows)[i]
+    if pop is None:
+        dg1.data['Size'][i] = None
+    elif pop > 1e8:
+        dg1.data['Size'][i] = 'Large'
+    else:
+        dg1.data['Size'][i] = 'Small'
+
+# Register the column
+if 'Size' not in dg1.columns:
+    dg1.columns.append('Size')
+
+# Group by the derived column
+print("Group by derived 'Size' column:")
+dg1.groupby('Size').agg({'Name': 'count'}).print()
+
+
+
+print("\nAGGREGATION Edge Cases")
+
+# 1. Aggregating with None values
+print("Aggregate GNP with missing values:")
+print("Sum:", dg1['GNP'].sum())
+print("Avg:", dg1['GNP'].avg())
+print("Min:", dg1['GNP'].min())
+print("Max:", dg1['GNP'].max())
+print("Count:", dg1['GNP'].count())
+
+# 2. Aggregating mixed types (GNP + Name)
+print("\nMixed-type aggregation:")
+print("GNP avg:", dg1['GNP'].avg())
+print("Name count:", dg1['Name'].count())
+
+# 3. Custom lambda aggregation
+print("\nCustom aggregation: GNP > 100000")
+filtered = [v for v in dg1['GNP'].values if v is not None and v > 100000]
+print("Sum of GNP > 100K:", sum(filtered))
+
+
+
+print("\nMERGE Edge Cases")
+
+# 1. Outer join with missing keys
+print("Outer join on 'Name':")
+dg2 = parseCSV("Testing_Datasets/Countries2.csv")
+dg1.merge(dg2, on="Name", how="outer").print()
+
+# 2. Left join with unmatched rows
+print("\nLeft join on 'Code':")
+left = parseCSV("Testing_Datasets/Countries.csv")
+right = DataGrid({'Code': ['US', 'IN'], 'Region': ['Americas', 'Asia']})
+left.merge(right, on='Code', how='left').print()
+
+# 3. Join with duplicate keys
+print("\nJoin with duplicate keys:")
+dup = DataGrid({'Name': ['India', 'India'], 'GNP': [80000, 85000]})
+dg1.merge(dup, on='Name', how='inner').print()
+
+# 4. Join with type mismatch
+print("\nJoin with GNP as string:")
+typed = DataGrid({'GNP': ['200000', '120000.5'], 'Label': ['Strong', 'Moderate']})
+dg1.merge(typed, on='GNP', how='inner').print()  # Should return empty or fail gracefully
+
+
+print("\nPARSING Edge Cases (Bad Rows)")
+
+# parsing the malformed CSV
+dg_bad = parseCSV("Testing_Datasets/Countries_BadRows.csv")
+
+# Print parsed data to inspect what happened
+dg_bad.print()
+
+# Check if parser handled bad rows
+print("\nCheck missing or extra columns:")
+for col, values in dg_bad.data.items():
+    print(f"{col}: {values}")
+
+# Now, check for missing values
+missing_counts = {col: sum(1 for v in vals if v is None) for col, vals in dg_bad.data.items()}
+print("\nMissing value counts per column:")
+print(missing_counts)
+
+# merging dg_bad (from bad rows) with dg2 (normal one)
+print("\nMerge with partially bad data:")
+dg_bad.merge(dg2, on="Code", how="outer").print()

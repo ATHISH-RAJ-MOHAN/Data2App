@@ -333,9 +333,16 @@ def parseCSV(filePath):
         # values = line.split(separator)
         values = line.split(",")
 
+        ''''
         if len(values) != numberOfColumns:
             warnings.append(f"Line {lineNumber}: Expected {numberOfColumns} values, got {len(values)}. Skipping.")
             continue
+        '''
+        if len(values) < numberOfColumns:
+            values += [None] * (numberOfColumns - len(values))  # pad missing columns
+        elif len(values) > numberOfColumns:
+            warnings.append(f"Line {lineNumber}: Extra values {values[numberOfColumns:]}. Ignored.")
+            values = values[:numberOfColumns]  # trim extra columns
 
         for i, value in enumerate(values):
             # typedValue = inferType(value, parse_dates=parse_dates)
@@ -351,9 +358,12 @@ def parseCSV(filePath):
 
 # def inferType(value, parse_dates=True):
 def inferType(value):
+    if value is None:
+        return None
+
     value = value.strip()
 
-    if value.lower() in ('', 'null', 'na', 'nan'):
+    if value.lower() in ('', 'null', 'na', 'nan','None',None):
         return None
     if value.lower() == 'true':
         return True
