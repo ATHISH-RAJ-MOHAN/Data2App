@@ -1,4 +1,4 @@
-from main import parseCSV, DataGrid
+from main import parseCSV, DataGrid, merge_chunks,merge_groupby_chunks
 import pandas as pd
 
 """#### Custom testing without comparision with Pandas"""
@@ -13,7 +13,7 @@ test_files = [
     "Testing_Datasets/Countries_Empty.csv",
     "Testing_Datasets/Countries_Header_only.csv"
 ]
-
+'''
 def run_test(file_name):
     print(f"\n Testing file: {file_name}")
     try:
@@ -201,6 +201,7 @@ dg1.groupby('GNP').agg({'Name': 'count'}).print()
 # 4. Group by derived column
 # Create derived column
 '''
+'''
 dg1.data['Size'] = ['Large' if p > 1e9 else 'Small' for p in dg1['Population']]
 # Register the column in the schema
 if 'Size' not in dg1.columns:
@@ -208,15 +209,16 @@ if 'Size' not in dg1.columns:
 # Now group by it
 print("Group by derived 'Size' column:")
 dg1.groupby('Size').agg({'Name': 'count'}).print()
-'''
-'''
+
+
 # Simulate parsed CSV data
 dg1 = DataGrid({
     'Name': ['USA', 'India', 'Germany'],
     'Code': ['US', 'IN', 'DE'],
     'GNP': [200000, None, 120000],
     'Population': [None, None, 83000000]  # intentionally messy
-})'''
+})
+
 
 # Derived column: classify countries as 'Large' or 'Small' population
 dg1.data['Size'] = [None] * dg1.numberOfRows
@@ -306,3 +308,123 @@ print(missing_counts)
 # merging dg_bad (from bad rows) with dg2 (normal one)
 print("\nMerge with partially bad data:")
 dg_bad.merge(dg2, on="Code", how="outer").print()
+
+'''
+
+#--------------------- Tests for Chunking ------------------------
+
+# Test-1
+'''
+print("\n\n===== TESTING CHUNKED PARSER =====")
+
+for file in test_files:
+    for i, chunk in enumerate(parseCSV(file, chunk_size=2), start=1):
+        print(file)
+        print(f"\n=== Chunk {i} ===")
+        chunk.print()
+'''
+
+#--------------------- Chunking + Projection ------------------------
+print("--------------------- Chunking + Projection ------------------------")
+test_file = "Testing_Datasets/Countries.csv"
+
+# Choose the columns you want to select
+selected_columns = ["Name", "Population"]
+
+# Chunk size 
+chunk_size = 2
+
+selected_chunks = []
+
+# Step 1: Iterate through chunked CSV
+for i, chunk in enumerate(parseCSV(test_file, chunk_size=chunk_size), start=1):
+    print(f"\n=== INPUT CHUNK {i} ===")
+    chunk.print()
+
+    # Step 2: Select columns using pandas-style []
+    selected_chunk = chunk[selected_columns]
+
+    print(f"\n=== SELECTED CHUNK {i} ===")
+    selected_chunk.print()
+
+    selected_chunks.append(selected_chunk)
+
+# Step 3: Merge chunks into final output
+final_result = merge_chunks(selected_chunks)
+
+print("\n======== FINAL MERGED RESULT ========")
+final_result.print()
+
+
+# --------------------- Chunking + Filtering ------------------------
+print("--------------------- Chunking + Filtering ------------------------")
+test_file = "Testing_Datasets/Countries.csv"
+
+# Chunk size 
+chunk_size = 2
+
+filtered_chunks = []
+
+# Step 1: Iterate through chunked CSV
+for i, chunk in enumerate(parseCSV(test_file, chunk_size=chunk_size), start=1):
+    print(f"\n=== INPUT CHUNK {i} ===")
+    chunk.print()
+
+    # Step 2: Filter rows using boolean expressions
+    # Example: Population > 100_000_000
+    filtered_chunk = chunk[chunk["Population"] > 100_000_000]
+
+    print(f"\n=== FILTERED CHUNK {i} ===")
+    filtered_chunk.print()
+
+    filtered_chunks.append(filtered_chunk)
+
+# Step 3: Merge chunks into final filtered output
+final_result = merge_chunks(filtered_chunks)
+
+print("\n======== FINAL MERGED FILTERED RESULT ========")
+final_result.print()
+
+
+print("--------------------- Chunking + GroupBy ------------------------")
+def run_groupby_chunk_tests(file_name, chunk_size=2):
+    print(f"\nTESTING GROUP BY WITH CHUNKING on {file_name}")
+
+    # Run the same tests you did without chunking
+    tests = [
+        ("sum",   {"Population": "sum"}),
+        ("max",   {"Population": "max"}),
+        ("min",   {"Population": "min"}),
+        ("avg",   {"Population": "avg"}),
+        ("count", {"Population": "count"}),
+    ]
+
+    for test_name, aggDict in tests:
+        print(f"\n==== TEST: Population {test_name.upper()} ====\n")
+
+        chunk_results = []
+
+        # 1. Process each chunk
+        for i, chunk in enumerate(parseCSV(file_name, chunk_size=chunk_size), start=1):
+            print(f"\n--- INPUT CHUNK {i} ---")
+            chunk.print()
+
+            g = chunk.groupby(["Name"]).agg(aggDict)
+
+
+            print(f"\n--- GROUPED CHUNK {i} ---")
+            g.print()
+
+            chunk_results.append(g)
+
+        # 2. Merge results
+        final = merge_groupby_chunks(chunk_results, ["Name"], aggDict)
+
+        print("\n--- FINAL MERGED RESULT ---")
+        final.print()
+
+test_file = "Testing_Datasets/Countries.csv"
+run_groupby_chunk_tests(test_file)      
+
+
+

@@ -305,56 +305,178 @@ class DataGrid:
             if c not in self.columns:
                 raise KeyError(f"Column '{c}' not found")
         return GroupBy(self, columns)
+    
+    # For chunking - We can remove this is not required, Only added for testing.
+    def project(self, selected_columns):
+        for col in selected_columns:
+            if col not in self.columns:
+                raise KeyError(f"Column '{col}' not found in DataGrid")
+        return DataGrid({col: self.data[col] for col in selected_columns})
+
+# merging of chunks - for filtering and projection
+def merge_chunks(chunk_list):
+    if not chunk_list:
+        return DataGrid({})
+
+    # Initialize combined dict
+    combined = {col: [] for col in chunk_list[0].columns}
+
+    # Append rows from all chunks
+    for chunk in chunk_list:
+        for col in chunk.columns:
+            combined[col].extend(chunk.data[col])
+
+    return DataGrid(combined)
+
+# merging of chunks - for group by and aggregation
+def merge_groupby_chunks(chunk_list, group_cols, aggregateDict):
+    if not chunk_list:
+        return DataGrid({})
+
+    merged = {}
+
+    for chunk in chunk_list:
+        for i in range(chunk.numberOfRows):
+            key = tuple(chunk.data[col][i] for col in group_cols)
+
+            if key not in merged:
+                merged[key] = {}
+
+                for col, agg in aggregateDict.items():
+                    val = chunk.data[col][i]
+
+                    if agg == "count":
+                        merged[key][col] = 1
+
+                    elif agg == "avg":
+                        merged[key][col] = (val, 1)
+
+                    else:
+                        merged[key][col] = val
+
+            else:
+                for col, agg in aggregateDict.items():
+                    val = chunk.data[col][i]
+
+                    if agg == "sum":
+                        merged[key][col] += val
+
+                    elif agg == "count":
+                        merged[key][col] += 1
+
+                    elif agg == "min":
+                        merged[key][col] = min(merged[key][col], val)
+
+                    elif agg == "max":
+                        merged[key][col] = max(merged[key][col], val)
+
+                    elif agg == "avg":
+                        s, c = merged[key][col]
+                        merged[key][col] = (s + val, c + 1)
+
+                    else:
+                        raise ValueError(f"Unsupported aggregation: {agg}")
+
+    final_data = {col: [] for col in group_cols + list(aggregateDict.keys())}
+
+    for key, agg_values in merged.items():
+
+        for idx, col in enumerate(group_cols):
+            final_data[col].append(key[idx])
+
+        for col, agg in aggregateDict.items():
+            val = agg_values[col]
+
+            if agg == "avg":
+                s, c = val
+                final_data[col].append(s / c)
+            else:
+                final_data[col].append(val)
+
+    return DataGrid(final_data)
+
+
 
 # def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
-def parseCSV(filePath):
+def parseCSV(filePath, chunk_size=None):
     try:
-        with open(filePath, 'r') as f:
-            lines = [line.strip() for line in f if line.strip()]
+        f = open(filePath, 'r')
     except FileNotFoundError:
         raise ValueError(f"File not found: {filePath}")
 
-    if not lines:
+    header = f.readline().strip()
+    if not header:
         raise ValueError("CSV file is empty")
 
-    # if auto_detect_separator:
-    #     for sep in [',', ';', '\t', '|']:
-    #         if sep in lines[0]:
-    #             separator = sep
-    #             break
-
-    # columns = lines[0].split(separator)
-    columns = lines[0].split(",")
+    columns = header.split(",")
     numberOfColumns = len(columns)
-    dataDict = {col: [] for col in columns}
-    warnings = []
 
-    for lineNumber, line in enumerate(lines[1:], start=2):
-        # values = line.split(separator)
-        values = line.split(",")
+    # Normal non-chunk behavior (same as before)
+    if chunk_size is None:
+        lines = [line.strip() for line in f if line.strip()]
+        dataDict = {col: [] for col in columns}
+        warnings = []
 
-        ''''
-        if len(values) != numberOfColumns:
-            warnings.append(f"Line {lineNumber}: Expected {numberOfColumns} values, got {len(values)}. Skipping.")
-            continue
-        '''
-        if len(values) < numberOfColumns:
-            values += [None] * (numberOfColumns - len(values))  # pad missing columns
-        elif len(values) > numberOfColumns:
-            warnings.append(f"Line {lineNumber}: Extra values {values[numberOfColumns:]}. Ignored.")
-            values = values[:numberOfColumns]  # trim extra columns
+        for lineNumber, line in enumerate(lines, start=2):
+            values = line.split(",")
 
-        for i, value in enumerate(values):
-            # typedValue = inferType(value, parse_dates=parse_dates)
-            typedValue = inferType(value)
-            dataDict[columns[i]].append(typedValue)
+            if len(values) < numberOfColumns:
+                values += [None] * (numberOfColumns - len(values))
+            elif len(values) > numberOfColumns:
+                warnings.append(f"Line {lineNumber}: Extra values {values[numberOfColumns:]} ignored")
+                values = values[:numberOfColumns]
 
-    if warnings:
-        print("Parsing Warnings:")
-        for w in warnings:
-            print("  -", w)
+            for i, value in enumerate(values):
+                typed = inferType(value)
+                dataDict[columns[i]].append(typed)
 
-    return DataGrid(dataDict)
+        if warnings:
+            print("Parsing Warnings:")
+            for w in warnings:
+                print("  -", w)
+
+        f.close()
+        return DataGrid(dataDict)
+
+    # Chunk mode: generator
+    def chunk_generator():
+        dataDict = {col: [] for col in columns}
+        count = 0
+        lineNumber = 1
+
+        for line in f:
+            lineNumber += 1
+            line = line.strip()
+            if not line:
+                continue
+
+            values = line.split(",")
+
+            if len(values) < numberOfColumns:
+                values += [None] * (numberOfColumns - len(values))
+            elif len(values) > numberOfColumns:
+                values = values[:numberOfColumns]
+
+            for i, value in enumerate(values):
+                typed = inferType(value)
+                dataDict[columns[i]].append(typed)
+
+            count += 1
+
+            # Emit chunk when full
+            if count >= chunk_size:
+                yield DataGrid(dataDict)
+                dataDict = {col: [] for col in columns}
+                count = 0
+
+        # Emit final partial chunk
+        if count > 0:
+            yield DataGrid(dataDict)
+
+        f.close()
+
+    return chunk_generator()
+
 
 # def inferType(value, parse_dates=True):
 def inferType(value):
