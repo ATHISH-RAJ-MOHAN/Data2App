@@ -1,4 +1,4 @@
-from main import parseCSV, DataGrid, merge_chunks,merge_groupby_chunks
+from helper import merge_simple_agg_chunks, parseCSV, merge_chunks, merge_groupby_chunks
 import pandas as pd
 
 """#### Custom testing without comparision with Pandas"""
@@ -424,7 +424,49 @@ def run_groupby_chunk_tests(file_name, chunk_size=2):
         final.print()
 
 test_file = "Testing_Datasets/Countries.csv"
-run_groupby_chunk_tests(test_file)      
+run_groupby_chunk_tests(test_file)    
 
+print("TESTING COUNT")
+partials = []
+for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
+    partials.append(chunk["GNP"].chunk_count())
 
+final = merge_simple_agg_chunks(partials, "count", "total_cnt")
+final.print()
+print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].count())
 
+print("TESTING SUM")
+partials = []
+for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
+    partials.append(chunk["GNP"].chunk_sum())
+
+final = merge_simple_agg_chunks(partials, "sum", "total_sum")
+final.print()
+print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].sum())
+
+print("TESTING MAX")
+partials = []
+for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
+    partials.append(chunk["GNP"].chunk_max())
+
+final = merge_simple_agg_chunks(partials, "max", "max_value")
+final.print()
+print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].max())
+
+print("TESTING MIN")
+partials = []
+for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
+    partials.append(chunk["GNP"].chunk_min())
+
+final = merge_simple_agg_chunks(partials, "min", "min_value")
+final.print()
+print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].min())
+
+print("TESTING AVG")
+partials = []
+for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
+    partials.append(chunk["GNP"].chunk_avg())
+
+final = merge_simple_agg_chunks(partials, "avg", "avg_value")
+final.print()
+print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].avg())
