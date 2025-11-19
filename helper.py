@@ -224,3 +224,61 @@ def merge_groupby_chunks(chunk_list, group_cols, aggregateDict):
 
     return DataGrid(final_data)
 
+def merge_join_chunks(left_chunks, right_chunks, on, how="inner"):
+    partial_results = []
+
+    for left_chunk in left_chunks:
+        unmatched_rows = [
+            {col: left_chunk.data[col][i] for col in left_chunk.columns}
+            for i in range(left_chunk.numberOfRows)
+        ]
+        matched_flags = [False] * left_chunk.numberOfRows
+
+        for right_chunk in right_chunks:
+            merged = left_chunk.merge(right_chunk, on=on, how="inner")
+            partial_results.append(merged)
+
+            right_keys = {right_chunk.data[on][i] for i in range(right_chunk.numberOfRows)}
+            for i, row in enumerate(unmatched_rows):
+                if row[on] in right_keys:
+                    matched_flags[i] = True
+
+        if how in ("left", "outer"):
+            if any(not m for m in matched_flags):
+                left_only_rows = []
+                right_cols = [c for c in right_chunks[0].columns if c != on]
+                for i, matched in enumerate(matched_flags):
+                    if not matched:
+                        row = unmatched_rows[i].copy()
+                        for col in right_cols:
+                            row[f"{col}_2"] = None
+                        left_only_rows.append(row)
+
+                if left_only_rows:
+                    all_cols = set(left_chunk.columns)
+                    all_cols.update(f"{c}_2" for c in right_cols)
+                    left_only_dg = {col: [] for col in all_cols}
+                    for row in left_only_rows:
+                        for col in all_cols:
+                            left_only_dg[col].append(row.get(col, None))
+                    partial_results.append(DataGrid(left_only_dg))
+
+    if not partial_results:
+        return DataGrid({})
+
+    all_cols = set()
+    for dg in partial_results:
+        all_cols.update(dg.columns)
+
+    final = {col: [] for col in all_cols}
+    for dg in partial_results:
+        for col in all_cols:
+            if col in dg.data:
+                final[col].extend(dg.data[col])
+            else:
+                final[col].extend([None] * dg.numberOfRows)
+
+    return DataGrid(final)
+
+
+

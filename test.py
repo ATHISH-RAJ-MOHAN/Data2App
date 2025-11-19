@@ -1,4 +1,4 @@
-from helper import merge_simple_agg_chunks, parseCSV, merge_chunks, merge_groupby_chunks
+from helper import merge_simple_agg_chunks, parseCSV, merge_chunks, merge_groupby_chunks, merge_join_chunks
 import pandas as pd
 
 """#### Custom testing without comparision with Pandas"""
@@ -425,6 +425,7 @@ def run_groupby_chunk_tests(file_name, chunk_size=2):
 
 test_file = "Testing_Datasets/Countries.csv"
 run_groupby_chunk_tests(test_file)    
+print()
 
 print("TESTING COUNT")
 partials = []
@@ -434,6 +435,7 @@ for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
 final = merge_simple_agg_chunks(partials, "count", "total_cnt")
 final.print()
 print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].count())
+print()
 
 print("TESTING SUM")
 partials = []
@@ -443,6 +445,7 @@ for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
 final = merge_simple_agg_chunks(partials, "sum", "total_sum")
 final.print()
 print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].sum())
+print()
 
 print("TESTING MAX")
 partials = []
@@ -452,6 +455,7 @@ for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
 final = merge_simple_agg_chunks(partials, "max", "max_value")
 final.print()
 print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].max())
+print()
 
 print("TESTING MIN")
 partials = []
@@ -461,6 +465,7 @@ for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
 final = merge_simple_agg_chunks(partials, "min", "min_value")
 final.print()
 print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].min())
+print()
 
 print("TESTING AVG")
 partials = []
@@ -470,3 +475,36 @@ for chunk in parseCSV("Testing_Datasets/Countries.csv", chunk_size=2):
 final = merge_simple_agg_chunks(partials, "avg", "avg_value")
 final.print()
 print(parseCSV("Testing_Datasets/Countries.csv")["GNP"].avg())
+print()
+
+print("TESTING INNER JOIN")
+left_chunks = list(parseCSV("Testing_Datasets/Countries.csv", chunk_size=2))
+right_chunks = list(parseCSV("Testing_Datasets/Countries2.csv", chunk_size=2))
+
+final_dg = merge_join_chunks(left_chunks, right_chunks, on="Name", how="inner")
+final_dg.print()
+print()
+parseCSV("Testing_Datasets/Countries.csv").merge(parseCSV("Testing_Datasets/Countries2.csv"),on="Name",how="inner").print()
+print()
+
+print("TESTING LEFT JOIN")
+final_dg = merge_join_chunks(left_chunks, right_chunks, on="Name", how="left")
+final_dg.print()
+print()
+parseCSV("Testing_Datasets/Countries.csv").merge(parseCSV("Testing_Datasets/Countries2.csv"),on="Name",how="left").print()
+print()
+
+print("TESTING RIGHT JOIN")
+final_dg = merge_join_chunks(left_chunks, right_chunks, on="Name", how="right")
+final_dg.print()
+print()
+parseCSV("Testing_Datasets/Countries.csv").merge(parseCSV("Testing_Datasets/Countries2.csv"),on="Name",how="right").print()
+print()
+
+print("TESTING FULL OUTER JOIN")
+final_dg = merge_join_chunks(left_chunks, right_chunks, on="Name", how="full")
+final_dg.print()
+print()
+parseCSV("Testing_Datasets/Countries.csv").merge(parseCSV("Testing_Datasets/Countries2.csv"),on="Name",how="full").print()
+
+
