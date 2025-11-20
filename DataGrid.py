@@ -43,7 +43,7 @@ class DataGrid:
           raise TypeError("Unsupported key type")
 
     def head(self, n=5):
-        return {col: vals[:n] for col, vals in self.data.items()}
+        return DataGrid({col: vals[:n] for col, vals in self.data.items()})
 
     def print(self):
         for i in range(self.numberOfRows):

@@ -1,6 +1,5 @@
 from DataGrid import DataGrid
 from datetime import datetime
-
 # def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
 def parseCSV(filePath, chunk_size=None):
     try:
@@ -142,7 +141,7 @@ def merge_simple_agg_chunks(partials, agg, column_name):
         val = max(vals) if vals else None
 
     elif agg == "count":
-        val = sum(p for p in partials if p is not None)
+        val = sum(1 for p in partials if p is not None)
 
     elif agg == "avg":
         total = 0
@@ -279,6 +278,4 @@ def merge_join_chunks(left_chunks, right_chunks, on, how="inner"):
                 final[col].extend([None] * dg.numberOfRows)
 
     return DataGrid(final)
-
-
 
