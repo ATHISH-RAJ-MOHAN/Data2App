@@ -39,16 +39,10 @@ Life Expectancy: Bar charts comparing average life expectancy across global regi
 
 🛠️ Installation & Requirements
 Ensure you have Python 3.x installed. You will need the following external libraries for the interface and plotting:
-
-Bash
-
 pip install streamlit matplotlib
 Note: The data manipulation logic (DataGrid and helper) relies only on the Python standard library.
 
 ▶️ Usage
 Running the Dashboard
 To launch the interactive dashboard, navigate to the project directory and run:
-
-Bash
-
 streamlit run app.py
