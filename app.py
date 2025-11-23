@@ -5,8 +5,8 @@ from DataGrid import *
 
 st.cache_data.clear()
 
-st.set_page_config(page_title="World Bank GDP Dashboard", layout="wide")
-st.title("🌍 World Bank Data Analysis Dashboard")
+st.set_page_config(page_title="World Bank GDP and Human Development Index Dashboard", layout="wide")
+st.title("🌍 World Bank and Human Development Index Data Analysis Dashboard")
 
 @st.cache_data
 def load_data():
