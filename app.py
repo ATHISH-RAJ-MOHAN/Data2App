@@ -6,8 +6,7 @@ from DataGrid import *
 st.cache_data.clear()
 
 st.set_page_config(page_title="World Bank GDP Dashboard", layout="wide")
-st.title("🌍 World Bank GDP Dashboard")
-st.write("Built using our custom CSV parser and DataGrid framework")
+st.title("🌍 World Bank Data Analysis Dashboard")
 
 @st.cache_data
 def load_data():
@@ -25,7 +24,7 @@ for c in raw_names:
     if c not in countries:
         countries.append(c)
 
-country = st.selectbox("Select a country", countries)
+country = st.selectbox("Select a country", countries, index = countries.index("Albania"))
 
 gdp_filtered = dg[dg["Country Name"] == country]
 
@@ -133,7 +132,10 @@ ax3.set_ylabel("HDI Score", fontsize=12)
 ax3.set_xlabel("Income Group", fontsize=12)
 ax3.grid(True, linestyle="--", alpha=0.5)
 
-st.pyplot(fig3)
+left, center, right = st.columns([1, 2, 1])
+with center:
+    st.pyplot(fig3)
+
 
 
 # 4) Average Life Expectancy by Region (with Year Dropdown)
@@ -144,7 +146,7 @@ all_years = wb_dg["Year"].values
 
 unique_years = sorted(list(set(y for y in all_years if y is not None)), reverse=True)
 
-selected_year = st.selectbox("Select Year", unique_years)
+selected_year = st.selectbox("Select Year", unique_years, index = unique_years.index(2017))
 
 wb_year_filtered = wb_dg[wb_dg["Year"] == selected_year]
 
@@ -183,7 +185,9 @@ if plot_regions:
     ax4.grid(axis='y', linestyle="--", alpha=0.5)
     
     fig4.tight_layout()
-    st.pyplot(fig4)
+    left, center, right = st.columns([1, 2, 1])
+    with center:
+        st.pyplot(fig4)
 else:
     st.warning(f"No Life Expectancy data available for the year {selected_year}.")
 
