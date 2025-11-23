@@ -5,12 +5,10 @@ from DataGrid import *
 
 st.cache_data.clear()
 
-# App Setup
 st.set_page_config(page_title="World Bank GDP Dashboard", layout="wide")
 st.title("🌍 World Bank GDP Dashboard")
 st.write("Built using our custom CSV parser and DataGrid framework")
 
-# Load dataset
 @st.cache_data
 def load_data():
     return parseCSV("Testing_Datasets/WorldBank.csv")
@@ -21,24 +19,19 @@ dg = load_data()
 st.header("1️⃣ GDP Growth Over Time")
 st.markdown("**Question:** How has GDP changed for a selected country over the years?")
 
-# Collect raw country names (skip None)
 raw_names = [c for c in dg["Country Name"].values if c is not None]
 countries = []
 for c in raw_names:
     if c not in countries:
         countries.append(c)
 
-# Dropdown for country selection
 country = st.selectbox("Select a country", countries)
 
-# Filter using pandas-style mask
 gdp_filtered = dg[dg["Country Name"] == country]
 
-# Extract columns
 years = gdp_filtered["Year"].values
 gdp_values = gdp_filtered["GDP (USD)"].values
 
-# Plot GDP trend
 if any(v is not None for v in gdp_values):
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(years, gdp_values, marker="o", linestyle="-", color="green", label="GDP (USD)")
@@ -62,16 +55,13 @@ st.markdown("---")
 st.header("2️⃣ GDP per Capita Breakdown")
 st.markdown("**Question:** Which countries have the highest average GDP per capita?")
 
-# Filter valid GDP rows
 wb_filtered = dg[dg["GDP per capita (USD)"] != None]
 
-# Group by Country Name
 grouped_country = wb_filtered.groupby("Country Name").agg({
     "GDP per capita (USD)": "avg"
 })
 result_country = grouped_country[["Country Name", "GDP per capita (USD)"]]
 
-# Pie Chart: Top 10 Countries by Avg GDP per Capita
 st.subheader(" Top 10 Countries by Avg GDP per Capita")
 if result_country.numberOfRows > 0:
     sorted_data = sorted(

@@ -1,9 +1,8 @@
 class DataGrid:
     def __init__(self, dataDict):
-        
         self.columns = list(dataDict.keys())
         self.numberOfRows = max((len(rows) for rows in dataDict.values()), default=0)
-        self.loc = LocAccessor(self) # For loc method
+        self.loc = LocAccessor(self)
         
         for col in self.columns:
             col_data = dataDict[col]
@@ -12,17 +11,15 @@ class DataGrid:
             dataDict[col] = col_data
         self.data = dataDict
 
+    #for accessing a column
     def __getitem__(self, key):
       if isinstance(key, str):
-          # Access a single column
           return Column(self.data.get(key, []))
 
       elif isinstance(key, list):
-          # Case: Boolean mask
           if all(isinstance(k, bool) for k in key):
               return self.filter_by_mask(key)
 
-          # Case: Column projection
           elif all(isinstance(k, str) for k in key):
               return DataGrid({col: self.data[col] for col in key})
 
@@ -30,11 +27,9 @@ class DataGrid:
               raise TypeError("Unsupported list type for __getitem__")
 
       elif isinstance(key, Column):
-        # If values are booleans, use as mask
         if all(isinstance(k, bool) for k in key.values):
             return self.filter_by_mask(key.values)
 
-        # If values are non-booleans, treat truthy values as True
         else:
             mask = [bool(v) for v in key.values]
             return self.filter_by_mask(mask)
@@ -42,14 +37,17 @@ class DataGrid:
       else:
           raise TypeError("Unsupported key type")
 
+    #prints the first 5 rows
     def head(self, n=5):
         return DataGrid({col: vals[:n] for col, vals in self.data.items()})
 
+    #prints the data grid as a dictionary
     def print(self):
         for i in range(self.numberOfRows):
             row = {col: self.data[col][i] for col in self.columns}
             print(row)
     
+    #joins based on a common column
     def merge(self, dg2, on, how = "inner"):
         if not isinstance(dg2, DataGrid):
             raise TypeError("Passed parameter is not a DataGrid")
@@ -105,6 +103,7 @@ class DataGrid:
 
         return DataGrid(mergedData)
     
+    #filters the rows based on a condition
     def filter(self, predicate):
       filtered_data = {col: [] for col in self.columns}
       for i in range(self.numberOfRows):
@@ -114,6 +113,7 @@ class DataGrid:
                   filtered_data[col].append(self.data[col][i])
       return DataGrid(filtered_data)
 
+    #filtering based on booleans
     def filter_by_mask(self, mask):
       if len(mask) != self.numberOfRows:
           raise ValueError("Mask length must match number of rows")
@@ -124,23 +124,10 @@ class DataGrid:
                   filtered_data[col].append(self.data[col][i])
       return DataGrid(filtered_data)
     
-    
-    '''def loc(self, predicate, columns=None):
-        selected_columns = columns if columns else self.columns
-        filtered_data = {col: [] for col in selected_columns}
-        for i in range(self.numberOfRows):
-            row = {col: self.data[col][i] for col in self.columns}
-            if predicate(row):
-                for col in selected_columns:
-                    filtered_data[col].append(self.data[col][i])
-        return DataGrid(filtered_data)'''
-    
     def isin(self, column, values):
         return self.filter(lambda row: row[column] in values)
     
-    def query(self, expression):
-        return self.filter(lambda row: eval(expression, {}, row))
-    
+    #returns an instance of GroupBy with the specified columns
     def groupby(self, columns):
         if isinstance(columns, str):
             columns = [columns]
@@ -149,7 +136,7 @@ class DataGrid:
                 raise KeyError(f"Column '{c}' not found")
         return GroupBy(self, columns)
     
-    # For chunking - We can remove this is not required, Only added for testing.
+    #projects the specifed columns
     def project(self, selected_columns):
         for col in selected_columns:
             if col not in self.columns:
@@ -160,70 +147,80 @@ class Column:
     def __init__(self, values):
         self.values = values
 
-    # Comparison operators return Column of booleans
+    #for comparing using > 
     def __gt__(self, other):
         return Column([v > other if v is not None else False for v in self.values])
 
+    #for comparing using < 
     def __lt__(self, other):
         return Column([v < other if v is not None else False for v in self.values])
 
+    #for comparing using ==
     def __eq__(self, other):
         return Column([v == other if v is not None else False for v in self.values])
 
+    #for comparing using >= 
     def __ge__(self, other):
         return Column([v >= other if v is not None else False for v in self.values])
 
+    #for comparing using <= 
     def __le__(self, other):
         return Column([v <= other if v is not None else False for v in self.values])
 
+    #for comparing using != 
     def __ne__(self, other):
         return Column([v != other if v is not None else False for v in self.values])
 
-    # Logical operators return Column of booleans
+    # Logical and operator
     def __and__(self, other):
         return Column([a and b for a, b in zip(self.values, other.values)])
 
+    # Logical or operator
     def __or__(self, other):
         return Column([a or b for a, b in zip(self.values, other.values)])
 
+    # Logical not operator
     def __invert__(self):
         return Column([not a for a in self.values])
 
-    # Membership check
-    def isin(self, values):
-        return Column([v in values if v is not None else False for v in self.values])
-
-    # Indexing and length
+    #for indexing
     def __getitem__(self, index):
         return self.values[index]
 
+    #gets the length
     def __len__(self):
         return len(self.values)
 
+    #for the print function call
     def __repr__(self):
         return repr(self.values)
     
+    #for the aggregation function - count
     def count(self):
         return sum(1 for v in self.values if v is not None)
 
+    #for the aggregation function - min
     def min(self):
         validValues = [v for v in self.values if v is not None]
         if(validValues):
             return min(validValues)
         return None
 
+    #for the aggregation function - max
     def max(self):
         validValues = [v for v in self.values if v is not None]
         if(validValues):
             return max(validValues)
         return None
 
+    #for the aggregation function - sum
     def sum(self):
         validValues = [v for v in self.values if isinstance(v, (int, float, bool))]
         if(validValues):
             return sum(validValues)
         return 0
 
+    #for the aggregation function - avg
     def avg(self):
         validValues = [v for v in self.values if isinstance(v, (int, float, bool))]
         if(validValues):
@@ -253,18 +250,17 @@ class GroupBy:
         self.dataGridObject = dataGridObject
         self.groupByColumns = groupByColumns
 
+    #this is for applying the specified aggregation functions on the groups
     def agg(self, aggregateDict):
         groups = {}
         nonGroupByColumns = [c for c in self.dataGridObject.columns if c not in self.groupByColumns]
 
-        # Build groups
         for i in range(self.dataGridObject.numberOfRows):
             key = tuple(self.dataGridObject.data[c][i] for c in self.groupByColumns)
             groups.setdefault(key, {col: [] for col in nonGroupByColumns})
             for col in nonGroupByColumns:
                 groups[key][col].append(self.dataGridObject.data[col][i])
 
-        # Aggregate
         result = {col: [] for col in self.groupByColumns + list(aggregateDict.keys())}
         for key, valuesDict in groups.items():
             for i, col in enumerate(self.groupByColumns):

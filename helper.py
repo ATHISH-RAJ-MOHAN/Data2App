@@ -1,6 +1,7 @@
 from DataGrid import DataGrid
 from datetime import datetime
-# def parseCSV(filePath, separator=',', parse_dates=True, auto_detect_separator=False):
+
+#parses the input file and returns a Data grid object
 def parseCSV(filePath, chunk_size=None):
     try:
         f = open(filePath, 'r')
@@ -14,7 +15,6 @@ def parseCSV(filePath, chunk_size=None):
     columns = header.split(",")
     numberOfColumns = len(columns)
 
-    # Normal non-chunk behavior (same as before)
     if chunk_size is None:
         lines = [line.strip() for line in f if line.strip()]
         dataDict = {col: [] for col in columns}
@@ -41,7 +41,6 @@ def parseCSV(filePath, chunk_size=None):
         f.close()
         return DataGrid(dataDict)
 
-    # Chunk mode: generator
     def chunk_generator():
         dataDict = {col: [] for col in columns}
         count = 0
@@ -66,13 +65,11 @@ def parseCSV(filePath, chunk_size=None):
 
             count += 1
 
-            # Emit chunk when full
             if count >= chunk_size:
                 yield DataGrid(dataDict)
                 dataDict = {col: [] for col in columns}
                 count = 0
 
-        # Emit final partial chunk
         if count > 0:
             yield DataGrid(dataDict)
 
@@ -80,7 +77,7 @@ def parseCSV(filePath, chunk_size=None):
 
     return chunk_generator()
 
-# def inferType(value, parse_dates=True):
+# convert to the corresponding python type
 def inferType(value):
     if value is None:
         return None
@@ -117,17 +114,15 @@ def merge_chunks(chunk_list):
     if not chunk_list:
         return DataGrid({})
 
-    # Initialize combined dict
     combined = {col: [] for col in chunk_list[0].columns}
 
-    # Append rows from all chunks
     for chunk in chunk_list:
         for col in chunk.columns:
             combined[col].extend(chunk.data[col])
 
     return DataGrid(combined)
 
-#merging aggregation results for the chunks
+#merging of chunks - for aggregation
 def merge_simple_agg_chunks(partials, agg, column_name):
     if agg == "sum":
         val = sum(p for p in partials if p is not None)
@@ -223,6 +218,7 @@ def merge_groupby_chunks(chunk_list, group_cols, aggregateDict):
 
     return DataGrid(final_data)
 
+#merging of chunks - for join
 def merge_join_chunks(left_chunks, right_chunks, on, how="inner"):
     partial_results = []
 
