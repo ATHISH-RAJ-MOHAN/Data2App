@@ -2,12 +2,14 @@
 
 This project implements a custom, lightweight data manipulation library (built from scratch in Python) designed to mimic core functionalities of Pandas. It demonstrates the library's capabilities through an interactive Streamlit Dashboard that analyzes World Bank GDP and Human Development Index (HDI) data.
 
+
 📂 Project Structure
 DataGrid.py: The core library containing the DataGrid class, Column class for operator overloading, and GroupBy logic.
 
 helper.py: Utilities for parsing CSVs (including chunked reading), type inference, and logic for merging dataset chunks.
 
 app.py: The main execution entry point. A Streamlit application that visualizes the data using Matplotlib and the custom DataGrid library.
+
 
 🚀 Features
 
@@ -40,6 +42,7 @@ HDI Distribution: Box plots showing Human Development Index scores across differ
 
 Life Expectancy: Bar charts comparing average life expectancy across global regions for a selected year.
 
+
 🛠️ Installation & Requirements
 
 Ensure you have Python 3.x installed. You will need the following external libraries for the interface and plotting:
@@ -47,6 +50,7 @@ Ensure you have Python 3.x installed. You will need the following external libra
 pip install streamlit matplotlib
 
 Note: The data manipulation logic (DataGrid and helper) relies only on the Python standard library.
+
 
 ▶️ Usage
 
