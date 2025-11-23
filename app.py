@@ -55,46 +55,6 @@ else:
 
 st.markdown("---")
 
-# # 2) GDP per Capita Breakdown
-# st.header("2️⃣ GDP per Capita Breakdown")
-# st.markdown("**Question:** Which countries have the highest average GDP per capita?")
-
-# wb_filtered = dg[dg["GDP per capita (USD)"] != None]
-
-# grouped_country = wb_filtered.groupby("Country Name").agg({
-#     "GDP per capita (USD)": "avg"
-# })
-# result_country = grouped_country[["Country Name", "GDP per capita (USD)"]]
-
-# st.subheader(" Top 10 Countries by Avg GDP per Capita")
-# if result_country.numberOfRows > 0:
-#     sorted_data = sorted(
-#         zip(result_country["Country Name"].values,
-#             result_country["GDP per capita (USD)"].values),
-#         key=lambda x: x[1] if x[1] is not None else 0,
-#         reverse=True
-#     )
-#     top_countries = sorted_data[:10]
-#     labels = [c[0] for c in top_countries]
-#     values = [c[1] for c in top_countries]
-
-#     fig2, ax2 = plt.subplots(figsize=(10, 5))
-#     wedges, _, autotexts = ax2.pie(
-#         values,
-#         labels=None,
-#         autopct="%1.1f%%",
-#         startangle=60
-#     )
-#     ax2.set_title("Top 10 Countries by Avg GDP per Capita", fontsize=14)
-#     ax2.legend(wedges, labels, title="Countries", loc="center left", bbox_to_anchor=(1, 0.5))
-#     fig2.tight_layout()
-#     left, center, right = st.columns([1, 2, 1])
-#     with center:
-#         st.pyplot(fig2)
-# else:
-#     st.info("No data available for Country-level view.")
-
-
 # 2)  GDP per Capita Breakdown (Chunking)
 st.header("2️⃣ GDP per Capita Breakdown")
 st.markdown("**Question:** Which countries have the highest average GDP per capita?")
