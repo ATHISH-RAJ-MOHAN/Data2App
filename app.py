@@ -10,12 +10,12 @@ st.title("🌍 World Bank and Human Development Index Data Analysis Dashboard")
 
 @st.cache_data
 def load_data():
-    return parseCSV("Testing_Datasets/WorldBank.csv")
+    return parseCSV("datasets/WorldBank.csv")
 
 @st.cache_data
 def load_chunks():
     # Adjust chunk_size depending on dataset size
-    return list(parseCSV("Testing_Datasets/WorldBank.csv", chunk_size=5000))
+    return list(parseCSV("datasets/WorldBank.csv", chunk_size=5000))
 
 dg = load_data()
 
@@ -106,8 +106,8 @@ else:
 st.header("3️⃣ Human Development by Economic Class")
 st.markdown("**Question:** How is the Human Development Index (HDI) distributed across different economic income groups in 2018?")
 
-wb_dg = parseCSV("Testing_Datasets/WorldBank.csv")
-hdi_dg = parseCSV("Testing_Datasets/HDI.csv")
+wb_dg = parseCSV("datasets/WorldBank.csv")
+hdi_dg = parseCSV("datasets/HDI.csv")
 
 wb_2018 = wb_dg[wb_dg["Year"] == 2018]
 
